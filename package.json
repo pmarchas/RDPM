@@ -1,6 +1,6 @@
 {
   "name": "rdpm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Gestor de conexiones RDP, VNC y SSH",
   "main": "electron/main.js",
   "scripts": {

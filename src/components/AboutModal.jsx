@@ -42,13 +42,9 @@ export default function AboutModal({ onClose }) {
               <span style={{ color: 'var(--text-muted)' }}>Plataforma</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{navigator.platform}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <span style={{ color: 'var(--text-muted)' }}>Cifrado</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>AES-256-CBC</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--text-muted)' }}>Tecnología</span>
-              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>Electron · React · Vite</span>
             </div>
           </div>
 
