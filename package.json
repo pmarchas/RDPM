@@ -13,6 +13,7 @@
     "preview":     "vite preview"
   },
   "dependencies": {
+    "electron-updater": "^6.1.8",
     "qrcode": "^1.5.4",
     "uuid":   "^9.0.1"
   },
@@ -42,7 +43,8 @@
       "electron/**/*",
       "package.json",
       "node_modules/qrcode/**",
-      "node_modules/uuid/**"
+      "node_modules/uuid/**",
+      "node_modules/electron-updater/**"
     ],
 
     "extraResources": [
@@ -50,7 +52,11 @@
       { "from": "assets/icon.ico", "to": "icon.ico" }
     ],
 
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "pmarchas",
+      "repo": "RDPM"
+    },
 
     "win": {
       "target": [

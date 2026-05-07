@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld('rm', {
     settingsPath:   ()    => ipcRenderer.invoke('app:settingsPath'),
     openExternal:   (url) => ipcRenderer.invoke('app:openExternal', url),
     checkUpdate:    ()    => ipcRenderer.invoke('app:checkUpdate'),
+    downloadUpdate: ()    => ipcRenderer.invoke('app:downloadUpdate'),
+    installUpdate:  ()    => ipcRenderer.invoke('app:installUpdate'),
+    onUpdateAvailable:    (cb) => ipcRenderer.on('update:available',     (_, d) => cb(d)),
+    onUpdateNotAvailable: (cb) => ipcRenderer.on('update:not-available', (_, d) => cb(d)),
+    onUpdateProgress:     (cb) => ipcRenderer.on('update:progress',      (_, d) => cb(d)),
+    onUpdateDownloaded:   (cb) => ipcRenderer.on('update:downloaded',    (_, d) => cb(d)),
+    onUpdateError:        (cb) => ipcRenderer.on('update:error',         (_, d) => cb(d)),
     // Sistema OS → bloqueo de pantalla
     onSystemLock:   (cb)  => ipcRenderer.on('system:lock', cb),
     offSystemLock:  (cb)  => ipcRenderer.removeListener('system:lock', cb),

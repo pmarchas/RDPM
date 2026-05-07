@@ -7,6 +7,7 @@ const net    = require('net');
 const dgram  = require('dgram');
 const { exec, spawn } = require('child_process');
 const QRCode = require('qrcode');
+const { autoUpdater } = require('electron-updater');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -757,29 +758,39 @@ ipcMain.handle('dialog:openKeyFile', async () => {
   return null;
 });
 
-// ─── Auto-updater (comprueba GitHub Releases) ────────────────────────────────
+// ─── Auto-updater (electron-updater + GitHub Releases) ───────────────────────
+autoUpdater.autoDownload    = false; // el usuario decide cuándo descargar
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.allowPrerelease = false;
+
+function sendUpdate(channel, data) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, data);
+  }
+}
+
+autoUpdater.on('update-available',    info     => sendUpdate('update:available',  info));
+autoUpdater.on('update-not-available', info    => sendUpdate('update:not-available', info));
+autoUpdater.on('download-progress',   progress => sendUpdate('update:progress',   progress));
+autoUpdater.on('update-downloaded',   info     => sendUpdate('update:downloaded', info));
+autoUpdater.on('error',               err      => sendUpdate('update:error',      err.message));
+
 ipcMain.handle('app:checkUpdate', async () => {
   try {
-    const https   = require('https');
-    const current = app.getVersion();
-    const options = {
-      hostname: 'api.github.com',
-      path:     '/repos/pmarchas/RDPM/releases/latest',
-      headers:  { 'User-Agent': 'RDPM-App' },
-    };
-    const data = await new Promise((resolve, reject) => {
-      https.get(options, res => {
-        let body = '';
-        res.on('data', c => body += c);
-        res.on('end', () => { try { resolve(JSON.parse(body)); } catch { reject(new Error('parse')); } });
-      }).on('error', reject);
-    });
-    const latest = (data.tag_name || '').replace(/^v/, '');
-    if (!latest) return { hasUpdate: false };
-    const newer = latest.split('.').map(Number).reduce((acc, n, i) =>
-      acc !== 0 ? acc : (n - (current.split('.').map(Number)[i] || 0)), 0) > 0;
-    return { hasUpdate: newer, latest, current, url: data.html_url };
-  } catch { return { hasUpdate: false }; }
+    const result = await autoUpdater.checkForUpdates();
+    return { hasUpdate: !!result?.updateInfo, info: result?.updateInfo || null };
+  } catch (err) {
+    return { hasUpdate: false, error: err.message };
+  }
+});
+
+ipcMain.handle('app:downloadUpdate', () => {
+  autoUpdater.downloadUpdate();
+  return true;
+});
+
+ipcMain.handle('app:installUpdate', () => {
+  autoUpdater.quitAndInstall(false, true);
 });
 
 // ─── Auto-lock: sistema OS → renderer ────────────────────────────────────────

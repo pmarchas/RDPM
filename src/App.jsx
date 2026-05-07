@@ -35,7 +35,36 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const searchRef = useRef(null);
 
-  useEffect(() => { init(); }, []);
+  // ── Update state ─────────────────────────────────────────────────────────────
+  // status: null | 'available' | 'downloading' | 'downloaded' | 'error' | 'checking' | 'uptodate'
+  const [updateStatus,   setUpdateStatus]   = useState(null);
+  const [updateInfo,     setUpdateInfo]     = useState(null);   // { version, releaseNotes }
+  const [updateProgress, setUpdateProgress] = useState(0);      // 0-100
+
+  useEffect(() => {
+    init();
+    // Listeners de electron-updater
+    api.app.onUpdateAvailable(info => {
+      setUpdateInfo(info);
+      setUpdateStatus('available');
+    });
+    api.app.onUpdateNotAvailable(() => {
+      setUpdateStatus('uptodate');
+      setTimeout(() => setUpdateStatus(null), 3000);
+    });
+    api.app.onUpdateProgress(p => {
+      setUpdateProgress(Math.round(p.percent || 0));
+      setUpdateStatus('downloading');
+    });
+    api.app.onUpdateDownloaded(info => {
+      setUpdateInfo(info);
+      setUpdateStatus('downloaded');
+    });
+    api.app.onUpdateError(() => {
+      setUpdateStatus('error');
+      setTimeout(() => setUpdateStatus(null), 4000);
+    });
+  }, []);
 
   // ── Cmd/Ctrl+K → enfocar búsqueda ───────────────────────────────────────────
   useEffect(() => {
@@ -116,14 +145,19 @@ export default function App() {
       setConfig(cfg);
     } catch (err) { showToast('error', `Error al cargar: ${err.message}`); }
     setLoading(false);
-    // Check for updates silently in the background
-    setTimeout(async () => {
-      try {
-        const res = await api.app.checkUpdate();
-        if (res?.hasUpdate) showToast('info', `Nueva versión ${res.latest} disponible — github.com/pmarchas`);
-      } catch {}
-    }, 5000);
+    // Comprueba actualizaciones silenciosamente al arrancar
+    setTimeout(() => api.app.checkUpdate().catch(() => {}), 5000);
   }
+
+  const handleCheckUpdate = useCallback(async () => {
+    setUpdateStatus('checking');
+    try {
+      await api.app.checkUpdate();
+    } catch {
+      setUpdateStatus('error');
+      setTimeout(() => setUpdateStatus(null), 4000);
+    }
+  }, []);
 
   const saveConfig = useCallback(async (newConfig) => {
     try { await api.config.write(newConfig); setConfig(newConfig); return true; }
@@ -360,6 +394,38 @@ export default function App() {
             <button className="btn-icon" data-tip={viewMode === 'grid' ? 'Vista lista' : 'Vista cuadrícula'} onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}>
               {viewMode === 'grid' ? <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg> : <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>}
             </button>
+            {/* ── Botón de actualización ── */}
+            <button
+              className={updateStatus === 'available' || updateStatus === 'downloaded' ? 'btn-primary' : 'btn-icon'}
+              onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? () => { api.app.downloadUpdate(); setUpdateStatus('downloading'); } : handleCheckUpdate}
+              disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+              title={updateStatus === 'downloaded' ? 'Reiniciar e instalar' : updateStatus === 'available' ? `Descargar v${updateInfo?.version}` : updateStatus === 'downloading' ? `Descargando… ${updateProgress}%` : updateStatus === 'uptodate' ? 'App al día' : 'Buscar actualizaciones'}
+              style={{ position: 'relative', ...(updateStatus === 'available' || updateStatus === 'downloaded' ? { display: 'flex', alignItems: 'center', gap: 6, animation: 'pulse-btn 2s ease-in-out infinite' } : {}) }}
+            >
+              {updateStatus === 'checking' && <span className="spinner" style={{ width: 14, height: 14 }} />}
+              {updateStatus === 'downloading' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                  <span className="spinner" style={{ width: 13, height: 13 }} />
+                  {updateProgress}%
+                </div>
+              )}
+              {updateStatus === 'downloaded' && (
+                <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                  Reiniciar e instalar
+                </>
+              )}
+              {updateStatus === 'available' && (
+                <>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  v{updateInfo?.version} disponible
+                </>
+              )}
+              {updateStatus === 'uptodate' && <svg width="15" height="15" fill="none" stroke="var(--success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
+              {(updateStatus === 'error') && <svg width="15" height="15" fill="none" stroke="var(--danger)" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
+              {!updateStatus && <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>}
+            </button>
+
             <button className="btn-primary" onClick={() => setServerModal({ open: true, server: null })} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
               Nuevo servidor
@@ -412,6 +478,10 @@ export default function App() {
         .toast-info { border-left: 3px solid var(--accent); }
         .toast-info svg { color: var(--accent); }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-btn {
+          0%, 100% { box-shadow: 0 0 0 0 var(--accent); }
+          50%       { box-shadow: 0 0 0 5px transparent; }
+        }
       `}</style>
     </div>
   );
