@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { LanguageContext } from './LanguageContext';
+import { tr } from './i18n';
 import Sidebar from './components/Sidebar';
 import ServerGrid from './components/ServerGrid';
 import ServerModal from './components/ServerModal';
@@ -346,10 +348,13 @@ export default function App() {
     });
   })();
 
+  const lang = settings?.language || 'es';
+  const t = (key, vars) => tr(lang, key, vars);
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
       <div className="spinner" style={{ width: 36, height: 36 }} />
-      <span style={{ color: 'var(--text-muted)' }}>Cargando…</span>
+      <span style={{ color: 'var(--text-muted)' }}>{tr('es', 'loading')}</span>
     </div>
   );
 
@@ -367,24 +372,25 @@ export default function App() {
   );
 
   return (
+    <LanguageContext.Provider value={lang}>
     <div className="app-layout">
       <Sidebar groups={config.groups || []} servers={config.servers || []} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup} onSaveGroup={handleSaveGroup} onDeleteGroup={handleDeleteGroup} onOpenSettings={() => setSettingsModal(true)} onOpenAbout={() => setAboutModal(true)} onOpenHistory={() => setHistoryModal(true)} onOpenImport={() => setImportModal(true)} />
 
       <div className="app-main">
         <div className="topbar">
           <div className="topbar-title">
-            {selectedGroup === 'all' ? 'Todos los servidores' : selectedGroup === '__favorites__' ? '⭐ Favoritos' : selectedGroup === 'ungrouped' ? 'Sin grupo' : (config.groups || []).find(g => g.id === selectedGroup)?.name || ''}
+            {selectedGroup === 'all' ? t('allServers') : selectedGroup === '__favorites__' ? t('favorites') : selectedGroup === 'ungrouped' ? t('ungrouped') : (config.groups || []).find(g => g.id === selectedGroup)?.name || ''}
             <span className="topbar-count">{visibleServers.length}</span>
           </div>
           <div className="topbar-right">
             <div className="search-wrap">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input ref={searchRef} type="text" placeholder="Buscar… (⌘K)" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'inherit', width: 200, padding: '6px 8px' }} />
+              <input ref={searchRef} type="text" placeholder={t('search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'inherit', width: 200, padding: '6px 8px' }} />
             </div>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ width: 'auto', padding: '6px 10px', fontSize: 13 }}>
-              <option value="name">Nombre</option>
-              <option value="type">Tipo</option>
-              <option value="group">Grupo</option>
+              <option value="name">{t('sortName')}</option>
+              <option value="type">{t('sortType')}</option>
+              <option value="group">{t('sortGroup')}</option>
             </select>
             <button className="btn-icon" data-tip="Verificar conectividad" onClick={() => pingAll(config.servers)} disabled={pinging} style={{ position: 'relative' }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ animation: pinging ? 'spin 1s linear infinite' : 'none' }}>
@@ -399,7 +405,7 @@ export default function App() {
               className={updateStatus === 'available' || updateStatus === 'downloaded' ? 'btn-primary' : 'btn-icon'}
               onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? () => { api.app.downloadUpdate(); setUpdateStatus('downloading'); } : handleCheckUpdate}
               disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-              title={updateStatus === 'downloaded' ? 'Reiniciar e instalar' : updateStatus === 'available' ? `Descargar v${updateInfo?.version}` : updateStatus === 'downloading' ? `Descargando… ${updateProgress}%` : updateStatus === 'uptodate' ? 'App al día' : 'Buscar actualizaciones'}
+              title={updateStatus === 'downloaded' ? t('restartInstall') : updateStatus === 'available' ? `v${updateInfo?.version} ${t('updateAvailable')}` : updateStatus === 'downloading' ? `${t('downloading')} ${updateProgress}%` : updateStatus === 'uptodate' ? t('upToDate') : t('checkUpdates')}
               style={{ position: 'relative', ...(updateStatus === 'available' || updateStatus === 'downloaded' ? { display: 'flex', alignItems: 'center', gap: 6, animation: 'pulse-btn 2s ease-in-out infinite' } : {}) }}
             >
               {updateStatus === 'checking' && <span className="spinner" style={{ width: 14, height: 14 }} />}
@@ -412,13 +418,13 @@ export default function App() {
               {updateStatus === 'downloaded' && (
                 <>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-                  Reiniciar e instalar
+                  {t('restartInstall')}
                 </>
               )}
               {updateStatus === 'available' && (
                 <>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  v{updateInfo?.version} disponible
+                  v{updateInfo?.version} {t('updateAvailable')}
                 </>
               )}
               {updateStatus === 'uptodate' && <svg width="15" height="15" fill="none" stroke="var(--success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -428,7 +434,7 @@ export default function App() {
 
             <button className="btn-primary" onClick={() => setServerModal({ open: true, server: null })} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              Nuevo servidor
+              {t('newServer')}
             </button>
           </div>
         </div>
@@ -462,6 +468,7 @@ export default function App() {
 
       <style>{`
         .app-layout { display: flex; height: 100vh; overflow: hidden; }
+        /* language provider wrapper */
         .app-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg-surface); flex-shrink: 0; }
         .topbar-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
@@ -484,5 +491,6 @@ export default function App() {
         }
       `}</style>
     </div>
+    </LanguageContext.Provider>
   );
 }

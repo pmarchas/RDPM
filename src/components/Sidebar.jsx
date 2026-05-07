@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import iconUrl from '../../assets/icon.png';
+import { useT } from '../LanguageContext';
 
 const GROUP_COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#84cc16'];
 
 const isMac = /Mac/.test(navigator.userAgent);
 
 export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup, onSaveGroup, onDeleteGroup, onOpenSettings, onOpenAbout, onOpenHistory, onOpenImport }) {
+  const t = useT();
   const [editingGroup, setEditingGroup] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -25,11 +27,11 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
   if (collapsed) {
     return (
       <div style={{ width: 48, background: 'var(--bg-surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '14px 0', gap: 8 }}>
-        <button className="btn-icon" onClick={() => setCollapsed(false)} data-tip="Expandir panel">
+        <button className="btn-icon" onClick={() => setCollapsed(false)} data-tip={t('expand')}>
           <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
         </button>
         <div style={{ width: 1, flex: 1 }} />
-        <button className="btn-icon" onClick={onOpenSettings} data-tip="Ajustes">
+        <button className="btn-icon" onClick={onOpenSettings} data-tip={t('settings')}>
           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 0-1.42-1.42M4.93 4.93a10 10 0 0 0-1.42 1.42M4.93 19.07a10 10 0 0 0 1.42 1.42M19.07 19.07a10 10 0 0 0 1.42-1.42M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
         </button>
       </div>
@@ -45,7 +47,7 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
           </div>
           <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em' }}>RDPM</span>
         </div>
-        <button className="btn-icon" onClick={() => setCollapsed(true)} data-tip="Colapsar" style={{ WebkitAppRegion: 'no-drag' }}>
+        <button className="btn-icon" onClick={() => setCollapsed(true)} data-tip={t('collapse')} style={{ WebkitAppRegion: 'no-drag' }}>
           <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
       </div>
@@ -56,7 +58,7 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
             <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
           </svg>
-          <span>Todos</span>
+          <span>{t('all')}</span>
           <span className="nav-badge">{servers.length}</span>
         </div>
         {servers.some(s => s.favorite) && (
@@ -71,8 +73,8 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
       </nav>
 
       <div className="sidebar-section-header">
-        <span>GRUPOS</span>
-        <button className="btn-icon" onClick={startNewGroup} data-tip="Nuevo grupo" style={{ width: 20, height: 20, padding: 0 }}>
+        <span>{t('groups')}</span>
+        <button className="btn-icon" onClick={startNewGroup} data-tip={t('newGroup')} style={{ width: 20, height: 20, padding: 0 }}>
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
@@ -113,14 +115,14 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
         {ungroupedCount > 0 && (
           <div className={`nav-item ${selectedGroup === 'ungrouped' ? 'active' : ''}`} onClick={() => onSelectGroup('ungrouped')}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeDasharray="4 2"/></svg>
-            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin grupo</span>
+            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{t('ungrouped')}</span>
             <span className="nav-badge">{ungroupedCount}</span>
           </div>
         )}
 
         {groups.length === 0 && (
           <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
-            Sin grupos aún.<br/>Crea uno para organizar tus servidores.
+            {t('noGroupsYet').split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br/>}</span>)}
           </div>
         )}
       </nav>
@@ -128,33 +130,33 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
       <div className="sidebar-footer">
         <button className="btn-ghost" onClick={onOpenHistory} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start', borderRadius: 'var(--radius-sm)' }}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Historial
+          {t('history')}
         </button>
         <button className="btn-ghost" onClick={onOpenImport} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start', borderRadius: 'var(--radius-sm)', marginTop: 2 }}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Importar
+          {t('import')}
         </button>
         <button className="btn-ghost" onClick={onOpenSettings} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start', borderRadius: 'var(--radius-sm)', marginTop: 2 }}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Ajustes
+          {t('settings')}
         </button>
         <button className="btn-ghost" onClick={onOpenAbout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start', borderRadius: 'var(--radius-sm)', marginTop: 2 }}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Acerca de...
+          {t('about')}
         </button>
       </div>
 
       {editingGroup && (
         <div className="modal-overlay" onClick={() => setEditingGroup(null)}>
           <div className="modal" style={{ width: 360 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h2>{editingGroup.id ? 'Editar grupo' : 'Nuevo grupo'}</h2><button className="btn-icon" onClick={() => setEditingGroup(null)}>✕</button></div>
+            <div className="modal-header"><h2>{editingGroup.id ? t('editGroup') : t('newGroup')}</h2><button className="btn-icon" onClick={() => setEditingGroup(null)}>✕</button></div>
             <div className="modal-body">
               <div className="field">
-                <label>Nombre del grupo</label>
-                <input autoFocus value={editingGroup.name} onChange={e => setEditingGroup(g => ({ ...g, name: e.target.value }))} onKeyDown={e => e.key === 'Enter' && saveGroup()} placeholder="Ej: Producción" />
+                <label>{t('groupName')}</label>
+                <input autoFocus value={editingGroup.name} onChange={e => setEditingGroup(g => ({ ...g, name: e.target.value }))} onKeyDown={e => e.key === 'Enter' && saveGroup()} placeholder={t('groupNamePlaceholder')} />
               </div>
               <div className="field">
-                <label>Color</label>
+                <label>{t('color')}</label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {GROUP_COLORS.map(c => (
                     <button key={c} onClick={() => setEditingGroup(g => ({ ...g, color: c }))} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: editingGroup.color === c ? '3px solid white' : '2px solid transparent', boxShadow: editingGroup.color === c ? '0 0 0 2px var(--accent)' : 'none' }} />
@@ -163,8 +165,8 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-ghost" onClick={() => setEditingGroup(null)}>Cancelar</button>
-              <button className="btn-primary" onClick={saveGroup} disabled={!editingGroup.name.trim()}>{editingGroup.id ? 'Guardar' : 'Crear'}</button>
+              <button className="btn-ghost" onClick={() => setEditingGroup(null)}>{t('cancel')}</button>
+              <button className="btn-primary" onClick={saveGroup} disabled={!editingGroup.name.trim()}>{editingGroup.id ? t('save') : t('create')}</button>
             </div>
           </div>
         </div>
@@ -173,13 +175,13 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
       {confirmDelete && (
         <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
           <div className="modal" style={{ width: 360 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h2>Eliminar grupo</h2><button className="btn-icon" onClick={() => setConfirmDelete(null)}>✕</button></div>
+            <div className="modal-header"><h2>{t('deleteGroup')}</h2><button className="btn-icon" onClick={() => setConfirmDelete(null)}>✕</button></div>
             <div className="modal-body">
-              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>¿Eliminar el grupo <strong style={{ color: 'var(--text-primary)' }}>{confirmDelete.name}</strong>?<br/>Los servidores de este grupo pasarán a "Sin grupo".</p>
+              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>¿{t('deleteGroup')} <strong style={{ color: 'var(--text-primary)' }}>{confirmDelete.name}</strong>?<br/>{t('deleteGroupMsg')}</p>
             </div>
             <div className="modal-footer">
-              <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-              <button className="btn-danger" onClick={() => { onDeleteGroup(confirmDelete.id); setConfirmDelete(null); }}>Eliminar</button>
+              <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>{t('cancel')}</button>
+              <button className="btn-danger" onClick={() => { onDeleteGroup(confirmDelete.id); setConfirmDelete(null); }}>{t('delete')}</button>
             </div>
           </div>
         </div>

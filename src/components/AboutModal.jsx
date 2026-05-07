@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import iconUrl from '../../assets/icon.png';
+import { useT } from '../LanguageContext';
 
 const api = window.rm;
 
 export default function AboutModal({ onClose }) {
+  const t = useT();
   const [version, setVersion] = useState('1.0.0');
 
   useEffect(() => {
@@ -14,7 +16,7 @@ export default function AboutModal({ onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Acerca de RDPM</h2>
+          <h2>{t('aboutTitle')}</h2>
           <button className="btn-icon" onClick={onClose}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
@@ -39,17 +41,17 @@ export default function AboutModal({ onClose }) {
 
           <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius)', padding: '14px 20px', marginBottom: 24, textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
-              <span style={{ color: 'var(--text-muted)' }}>Plataforma</span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('platform')}</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{navigator.platform}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--text-muted)' }}>Cifrado</span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('encryption')}</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>AES-256-CBC</span>
             </div>
           </div>
 
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
-            Creado por <strong style={{ color: 'var(--text-primary)' }}>pmarchas</strong>
+            {t('createdBy')} <strong style={{ color: 'var(--text-primary)' }}>pmarchas</strong>
           </div>
 
           <a
@@ -71,7 +73,7 @@ export default function AboutModal({ onClose }) {
         </div>
 
         <div className="modal-footer" style={{ justifyContent: 'center' }}>
-          <button className="btn-primary" onClick={onClose} style={{ padding: '9px 32px' }}>Cerrar</button>
+          <button className="btn-primary" onClick={onClose} style={{ padding: '9px 32px' }}>{t('close')}</button>
         </div>
       </div>
     </div>

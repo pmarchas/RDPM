@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useT } from '../LanguageContext';
 
 const TYPE_COLORS = { RDP: 'rdp', VNC: 'vnc', SSH: 'ssh' };
 
@@ -76,6 +77,7 @@ function PwdWarning({ server, warningDays }) {
 
 // ─── Inline note editor ───────────────────────────────────────────────────────
 function NoteEditor({ server, onSave, style }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [val, setVal]         = useState(server.notes || '');
   const taRef                 = useRef(null);
@@ -99,17 +101,18 @@ function NoteEditor({ server, onSave, style }) {
   );
 
   return (
-    <div onClick={() => setEditing(true)} title="Clic para editar nota"
+    <div onClick={() => setEditing(true)} title={t('editNote')}
       style={{ fontSize: 12, color: val ? 'var(--text-muted)' : 'var(--border-light)', cursor: 'text',
                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                minHeight: 16, ...style }}>
-      {val || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>Añadir nota…</span>}
+      {val || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>{t('addNote')}</span>}
     </div>
   );
 }
 
 // ─── Server card (grid view) ─────────────────────────────────────────────────
 function ServerCard({ server, group, ping, onConnect, onEdit, onDelete, onToggleFavorite, onWol, onContextMenu, onUpdateNotes, passwordWarningDays }) {
+  const t = useT();
   const [connecting, setConnecting] = useState(false);
   const [waking, setWaking]         = useState(false);
 
@@ -135,7 +138,7 @@ function ServerCard({ server, group, ping, onConnect, onEdit, onDelete, onToggle
       <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
         <button className="btn-icon star-btn" onClick={e => { e.stopPropagation(); onToggleFavorite(server); }}
           style={{ width: 20, height: 20, padding: 0, color: server.favorite ? '#f59e0b' : 'var(--border-light)', opacity: server.favorite ? 1 : 0.4 }}
-          title={server.favorite ? 'Quitar de favoritos' : 'Marcar favorito'}>
+          title={server.favorite ? t('removeFavorite') : t('addFavorite')}>
           <svg width="13" height="13" fill={server.favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
           </svg>
@@ -175,7 +178,7 @@ function ServerCard({ server, group, ping, onConnect, onEdit, onDelete, onToggle
       <div className="server-card-actions">
         <button className="btn-primary card-connect-btn" onClick={handleConnect} disabled={connecting} style={{ padding: '6px 12px', fontSize: 13 }}>
           {connecting ? <span className="spinner" style={{ width: 14, height: 14 }} /> : CONNECT_ICON}
-          {connecting ? 'Conectando…' : 'Conectar'}
+          {connecting ? t('connecting') : t('connect')}
         </button>
         {server.mac && (
           <button className="btn-icon" onClick={handleWol} disabled={waking} title="Wake on LAN" style={{ color: waking ? '#f59e0b' : undefined }}>
@@ -198,6 +201,7 @@ function ServerCard({ server, group, ping, onConnect, onEdit, onDelete, onToggle
 const LIST_COLS = '20px 22px 20px 1fr 180px 70px 80px 110px 140px';
 
 function ServerRow({ server, group, ping, onConnect, onEdit, onDelete, onToggleFavorite, onWol, onContextMenu, onUpdateNotes, passwordWarningDays }) {
+  const t = useT();
   const [connecting, setConnecting] = useState(false);
 
   async function handleConnect(e) {
@@ -266,7 +270,7 @@ function ServerRow({ server, group, ping, onConnect, onEdit, onDelete, onToggleF
                 : <span style={{ width: 8, height: 8, borderRadius: '50%', background: group.color, flexShrink: 0 }} />}
               <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
             </>)
-          : <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin grupo</span>}
+          : <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>{t('noGroup')}</span>}
       </div>
 
       {/* 9 — acciones */}
@@ -293,6 +297,7 @@ function ServerRow({ server, group, ping, onConnect, onEdit, onDelete, onToggleF
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 export default function ServerGrid({ servers, groups, viewMode, pingResults = {}, onConnect, onEdit, onDelete, onToggleFavorite, onWol, onContextMenu, onAddNew, searchQuery, onUpdateNotes, passwordWarningDays = 90 }) {
+  const t = useT();
   const groupMap = Object.fromEntries((groups || []).map(g => [g.id, g]));
 
   if (servers.length === 0) {
@@ -302,20 +307,20 @@ export default function ServerGrid({ servers, groups, viewMode, pingResults = {}
           <>
             <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>Sin resultados</div>
-              <div style={{ fontSize: 14, marginTop: 4 }}>No hay servidores que coincidan con "{searchQuery}"</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('noResults')}</div>
+              <div style={{ fontSize: 14, marginTop: 4 }}>{t('noResultsMsg')} "{searchQuery}"</div>
             </div>
           </>
         ) : (
           <>
             <svg width="56" height="56" fill="none" stroke="currentColor" strokeWidth="1.2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>Sin servidores</div>
-              <div style={{ fontSize: 14, marginTop: 4 }}>Añade tu primer servidor para comenzar</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('noServers')}</div>
+              <div style={{ fontSize: 14, marginTop: 4 }}>{t('addFirstServer')}</div>
             </div>
             <button className="btn-primary" onClick={onAddNew} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              Añadir servidor
+              {t('addServer')}
             </button>
           </>
         )}
@@ -337,12 +342,12 @@ export default function ServerGrid({ servers, groups, viewMode, pingResults = {}
           <div />{/* estrella */}
           <div />{/* ping */}
           <div />{/* icono */}
-          <div>Nombre</div>
+          <div>{t('sortName')}</div>
           <div>Host</div>
-          <div>Tipo</div>
-          <div>Latencia</div>
-          <div>Grupo</div>
-          <div>Acciones</div>
+          <div>{t('sortType')}</div>
+          <div>{t('latency')}</div>
+          <div>{t('sortGroup')}</div>
+          <div>{t('actions')}</div>
         </div>
         {servers.map(s => (
           <ServerRow key={s.id} server={s} group={s.groupId ? groupMap[s.groupId] : null}

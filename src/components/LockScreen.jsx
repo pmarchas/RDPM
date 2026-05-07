@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { verifyTOTP, totpSecondsLeft } from '../utils/totp';
 import iconUrl from '../../assets/icon.png';
+import { useT } from '../LanguageContext';
 
 // ─── TOTP mode ────────────────────────────────────────────────────────────────
 function TotpLock({ totpSecret, onUnlock }) {
+  const t = useT();
   const [digits, setDigits]       = useState(['', '', '', '', '', '']);
   const [error, setError]         = useState('');
   const [checking, setChecking]   = useState(false);
@@ -22,7 +24,7 @@ function TotpLock({ totpSecret, onUnlock }) {
     const ok = await verifyTOTP(totpSecret, code);
     if (ok) { onUnlock(); }
     else {
-      setError('Código incorrecto. Inténtalo de nuevo.');
+      setError(t('wrongCode'));
       setDigits(['', '', '', '', '', '']);
       setTimeout(() => inputRefs.current[0]?.focus(), 50);
     }
@@ -52,8 +54,8 @@ function TotpLock({ totpSecret, onUnlock }) {
   return (
     <>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6, marginBottom: 20 }}>
-        Introduce el código de tu<br/>
-        <strong style={{ color: 'var(--text-secondary)' }}>aplicación de autenticación</strong>
+        {t('enterAuthCode')}<br/>
+        <strong style={{ color: 'var(--text-secondary)' }}>{t('authApp')}</strong>
       </p>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }} onPaste={handlePaste}>
@@ -79,7 +81,7 @@ function TotpLock({ totpSecret, onUnlock }) {
 
       <div style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Código válido por</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t('validFor')}</span>
           <span style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-mono)', color: urgentColor }}>{secondsLeft}s</span>
         </div>
         <div style={{ height: 4, background: 'var(--bg-elevated)', borderRadius: 99, overflow: 'hidden' }}>
@@ -94,6 +96,7 @@ function TotpLock({ totpSecret, onUnlock }) {
 
 // ─── Password mode ────────────────────────────────────────────────────────────
 function PasswordLock({ masterPassword, onUnlock }) {
+  const t = useT();
   const [pwd, setPwd]     = useState('');
   const [show, setShow]   = useState(false);
   const [error, setError] = useState('');
@@ -103,14 +106,14 @@ function PasswordLock({ masterPassword, onUnlock }) {
 
   function verify() {
     if (pwd === masterPassword) { onUnlock(); }
-    else { setError('Contraseña incorrecta.'); setPwd(''); setTimeout(() => inputRef.current?.focus(), 50); }
+    else { setError(t('wrongPassword')); setPwd(''); setTimeout(() => inputRef.current?.focus(), 50); }
   }
 
   return (
     <>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6, marginBottom: 20 }}>
-        Introduce tu<br/>
-        <strong style={{ color: 'var(--text-secondary)' }}>contraseña maestra</strong> para continuar
+        {t('enterPassword')}<br/>
+        <strong style={{ color: 'var(--text-secondary)' }}>{t('masterPasswordLabel')}</strong> {t('toContinue')}
       </p>
 
       <div style={{ position: 'relative', marginBottom: 12 }}>
@@ -120,7 +123,7 @@ function PasswordLock({ masterPassword, onUnlock }) {
           value={pwd}
           onChange={e => { setPwd(e.target.value); setError(''); }}
           onKeyDown={e => e.key === 'Enter' && verify()}
-          placeholder="Contraseña maestra…"
+          placeholder={t('masterPwdPlaceholder')}
           style={{
             width: '100%', boxSizing: 'border-box',
             padding: '12px 42px 12px 16px', fontSize: 15,
@@ -142,7 +145,7 @@ function PasswordLock({ masterPassword, onUnlock }) {
 
       <button className="btn-primary" onClick={verify} disabled={!pwd}
         style={{ width: '100%', padding: '11px', fontSize: 15, marginTop: 4 }}>
-        Desbloquear
+        {t('unlock')}
       </button>
     </>
   );
@@ -160,6 +163,7 @@ function ErrorMsg({ children }) {
 
 // ─── Lock screen shell ────────────────────────────────────────────────────────
 export default function LockScreen({ totpSecret, masterPassword, onUnlock }) {
+  const t = useT();
   const useTotp = !!totpSecret;
 
   return (
@@ -192,9 +196,9 @@ export default function LockScreen({ totpSecret, masterPassword, onUnlock }) {
               </svg>
             </div>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>RDPM bloqueado</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>{t('locked')}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {useTotp ? 'Verificación en dos pasos' : 'Verificación de contraseña'}
+            {useTotp ? t('twoStep') : t('passwordVerif')}
           </div>
         </div>
 

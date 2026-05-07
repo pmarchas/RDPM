@@ -32,6 +32,7 @@ const SETTINGS_DEFAULTS = {
   lockTimeout: 0,           // minutes — 0 = disabled
   lockOnSystemSleep: true,  // lock when OS screen locks / suspends
   passwordWarningDays: 90,  // warn when password is older than N days (0 = disabled)
+  language: 'es',           // 'es' | 'en'
 };
 
 function readLocalSettings() {
