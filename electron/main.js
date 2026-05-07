@@ -764,7 +764,7 @@ ipcMain.handle('app:checkUpdate', async () => {
     const current = app.getVersion();
     const options = {
       hostname: 'api.github.com',
-      path:     '/repos/pmarchas/rdpm/releases/latest',
+      path:     '/repos/pmarchas/RDPM/releases/latest',
       headers:  { 'User-Agent': 'RDPM-App' },
     };
     const data = await new Promise((resolve, reject) => {
