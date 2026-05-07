@@ -6,7 +6,8 @@ const api = window.rm;
 
 export default function SettingsModal({ settings, onSave, onClose }) {
   const t = useT();
-  const [form, setForm] = useState({ configPath: '', homeConfigPath: '', masterPassword: '', viewMode: 'grid', totpSecret: '', lockTimeout: 0, lockOnSystemSleep: true, passwordWarningDays: 90, language: 'es', ...settings });
+  const [form, setForm] = useState({ configPath: '', homeConfigPath: '', appPassword: '', masterPassword: '', viewMode: 'grid', totpSecret: '', lockTimeout: 0, lockOnSystemSleep: true, passwordWarningDays: 90, language: 'es', ...settings });
+  const [showAppPwd, setShowAppPwd] = useState(false);
   const [testResult, setTestResult]         = useState(null);
   const [testing, setTesting]               = useState(false);
   const [homeTestResult, setHomeTestResult] = useState(null);
@@ -86,7 +87,7 @@ export default function SettingsModal({ settings, onSave, onClose }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{t('settingsTitle')}</h2>
@@ -176,12 +177,33 @@ export default function SettingsModal({ settings, onSave, onClose }) {
             </div>
           </div>
 
+          {/* ── Contraseña de acceso a la app (local, por usuario) ─────────── */}
+          <div className="settings-section">
+            <div className="settings-section-title">
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              {t('appPasswordTitle')}
+            </div>
+            <p className="settings-desc">{t('appPasswordDesc')}</p>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>{t('appPasswordLabel')}</label>
+              <div style={{ position: 'relative', display: 'flex' }}>
+                <input value={form.appPassword} onChange={e => set('appPassword', e.target.value)} type={showAppPwd ? 'text' : 'password'} placeholder={t('appPasswordPlaceholder')} autoComplete="new-password" style={{ paddingRight: 42 }} />
+                <button type="button" onClick={() => setShowAppPwd(v => !v)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', padding: '0 12px', background: 'transparent', color: 'var(--text-muted)' }}>
+                  {showAppPwd ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                </button>
+              </div>
+              {!form.appPassword && <div className="field-note" style={{ color: 'var(--warning)' }}>{t('noAppPwdWarning')}</div>}
+            </div>
+          </div>
+
+          {/* ── Contraseña de cifrado del fichero compartido ──────────────── */}
           <div className="settings-section">
             <div className="settings-section-title">
               <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              {t('security')}
+              {t('configEncryptionTitle')}
             </div>
-            <p className="settings-desc">{t('securityDesc')}</p>
+            <p className="settings-desc">{t('configEncryptionDesc')}</p>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>{t('masterPassword')}</label>
               <div style={{ position: 'relative', display: 'flex' }}>
@@ -191,7 +213,7 @@ export default function SettingsModal({ settings, onSave, onClose }) {
                   : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                 </button>
               </div>
-              {!form.masterPassword && <div className="field-note" style={{ color: 'var(--warning)' }}>{t('noMasterPwdWarning')}</div>}
+              {!form.masterPassword && <div className="field-note" style={{ color: 'var(--text-muted)' }}>{t('noMasterPwdWarning')}</div>}
             </div>
           </div>
 
@@ -272,7 +294,7 @@ export default function SettingsModal({ settings, onSave, onClose }) {
               {t('autoLockDesc')}
             </p>
 
-            {!(form.totpSecret || form.masterPassword) && (
+            {!(form.totpSecret || form.appPassword || form.masterPassword) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f59e0b12', border: '1px solid #f59e0b30', borderRadius: 'var(--radius-sm)', marginBottom: 12, fontSize: 13, color: '#f59e0b' }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 {t('needAuthForLock')}
@@ -285,7 +307,7 @@ export default function SettingsModal({ settings, onSave, onClose }) {
                 <select
                   value={form.lockTimeout}
                   onChange={e => set('lockTimeout', Number(e.target.value))}
-                  disabled={!(form.totpSecret || form.masterPassword)}
+                  disabled={!(form.totpSecret || form.appPassword || form.masterPassword)}
                 >
                   <option value={0}>{t('disabled')}</option>
                   <option value={1}>{t('min1')}</option>
@@ -303,7 +325,7 @@ export default function SettingsModal({ settings, onSave, onClose }) {
                     type="checkbox"
                     checked={!!form.lockOnSystemSleep}
                     onChange={e => set('lockOnSystemSleep', e.target.checked)}
-                    disabled={!(form.totpSecret || form.masterPassword)}
+                    disabled={!(form.totpSecret || form.appPassword || form.masterPassword)}
                     style={{ width: 'auto', margin: 0, cursor: 'pointer' }}
                   />
                   <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>

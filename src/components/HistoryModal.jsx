@@ -45,7 +45,7 @@ export default function HistoryModal({ onClose }) {
     : history;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ width: 680, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

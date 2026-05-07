@@ -68,7 +68,7 @@ export default function ServerModal({ server, groups, onSave, onClose }) {
   const isEdit = !!server?.id;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{isEdit ? t('editServerTitle') : t('newServerTitle')}</h2>

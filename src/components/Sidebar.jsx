@@ -147,7 +147,7 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
       </div>
 
       {editingGroup && (
-        <div className="modal-overlay" onClick={() => setEditingGroup(null)}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setEditingGroup(null); }}>
           <div className="modal" style={{ width: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header"><h2>{editingGroup.id ? t('editGroup') : t('newGroup')}</h2><button className="btn-icon" onClick={() => setEditingGroup(null)}>✕</button></div>
             <div className="modal-body">
@@ -173,7 +173,7 @@ export default function Sidebar({ groups, servers, selectedGroup, onSelectGroup,
       )}
 
       {confirmDelete && (
-        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setConfirmDelete(null); }}>
           <div className="modal" style={{ width: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header"><h2>{t('deleteGroup')}</h2><button className="btn-icon" onClick={() => setConfirmDelete(null)}>✕</button></div>
             <div className="modal-body">

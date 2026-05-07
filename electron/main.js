@@ -27,7 +27,9 @@ function ensureSettingsDir() {
 }
 
 const SETTINGS_DEFAULTS = {
-  configPath: '', homeConfigPath: '', masterPassword: '',
+  configPath: '', homeConfigPath: '',
+  appPassword: '',       // contraseña local por usuario: bloqueo de pantalla + cifrado de Home
+  masterPassword: '',    // contraseña compartida: cifrado del fichero de config compartido
   theme: 'dark', viewMode: 'grid',
   lockTimeout: 0,           // minutes — 0 = disabled
   lockOnSystemSleep: true,  // lock when OS screen locks / suspends
@@ -309,7 +311,7 @@ function buildSSHCommand(server) {
     jumpFlag = `-J ${jhKey}${jhUser}${jh.host}:${jhPort} `;
   }
 
-  return `ssh -o StrictHostKeyChecking=ask ${portFlag}${keyFlag}${jumpFlag}${target}`;
+  return `ssh -o StrictHostKeyChecking=accept-new ${portFlag}${keyFlag}${jumpFlag}${target}`;
 }
 
 function launchSSH(server) {
@@ -349,56 +351,17 @@ function launchSSH(server) {
     }
 
     if (password) {
-      // Sin plink: usar SSH_ASKPASS con ficheros temporales (OpenSSH ≥ 8.4 en Win10/11)
-      // La contraseña se escribe en un .tmp para evitar problemas de escaping en cmd.
-      const ts = Date.now();
-      const passFile   = path.join(os.tmpdir(), `rdpm_pw_${ts}.tmp`);
-      const askpassBat = path.join(os.tmpdir(), `rdpm_ap_${ts}.bat`);
-      const wrapperBat = path.join(os.tmpdir(), `rdpm_ssh_${ts}.bat`);
-
-      fs.writeFileSync(passFile, password, 'utf8');  // sin escaping, fichero binario
-
-      fs.writeFileSync(askpassBat, [
-        '@echo off',
-        `type "${passFile}"`,
-        `del "${passFile}" 2>nul`,
-        'del "%~f0" 2>nul',
-      ].join('\r\n'), 'utf8');
-
-      fs.writeFileSync(wrapperBat, [
-        '@echo off',
-        `set "SSH_ASKPASS_REQUIRE=force"`,
-        `set "SSH_ASKPASS=${askpassBat}"`,
-        sshBase,
-        `del "${askpassBat}" 2>nul`,
-        `del "${passFile}" 2>nul`,
-        'del "%~f0" 2>nul',
-      ].join('\r\n'), 'utf8');
-
-      // Limpieza de emergencia por si el bat no se auto-elimina
-      setTimeout(() => { try { fs.unlinkSync(passFile);   } catch {} }, 120000);
-      setTimeout(() => { try { fs.unlinkSync(askpassBat); } catch {} }, 120000);
-      setTimeout(() => { try { fs.unlinkSync(wrapperBat); } catch {} }, 120000);
-
-      // También copiamos al portapapeles: si SSH_ASKPASS_REQUIRE no está soportado
-      // (OpenSSH < 8.4), el usuario puede pegar la contraseña manualmente.
+      // Sin plink: copiar la contraseña al portapapeles y abrir el terminal con ssh.
+      // El usuario la pega cuando ssh la solicite (una sola vez).
       clipboard.writeText(password);
-
-      exec(`wt.exe new-tab --title "${server.name}" -- cmd.exe /k "${wrapperBat}"`, (err) => {
-        if (err) exec(`start cmd.exe /k "${wrapperBat}"`, (e2) => {
-          if (e2) exec(`start powershell.exe -NoExit -Command "cmd /k \\\"${wrapperBat}\\\""`);
-        });
-      });
-      return 'pwd_copied'; // toast de fallback por si SSH_ASKPASS no funciona
     }
 
-    // Sin contraseña
     exec(`wt.exe new-tab --title "${server.name}" -- ${sshBase}`, (err) => {
       if (err) exec(`start powershell.exe -NoExit -Command "${sshBase}"`, (e2) => {
-        if (e2) exec(`start cmd.exe /k ${sshBase}`);
+        if (e2) exec(`start cmd.exe /k "${sshBase}"`);
       });
     });
-    return null;
+    return password ? 'pwd_copied' : null;
   }
 
   // ── macOS / Linux ──────────────────────────────────────────────────────────
@@ -496,14 +459,21 @@ ipcMain.handle('config:read', () => {
   const settings     = readLocalSettings();
   const sharedConfig = readConfig(settings.configPath);
   const homeData     = readHomeConfig(resolveHomeConfigPath(settings));
-  const pwd          = settings.masterPassword;
 
-  if (pwd) {
+  // Shared config: encrypted with masterPassword (shared among users)
+  const sharedPwd = settings.masterPassword;
+  if (sharedPwd) {
     sharedConfig.servers = (sharedConfig.servers || []).map(s => ({
-      ...s, password: s.password ? decrypt(s.password, pwd) : '',
+      ...s, password: s.password ? decrypt(s.password, sharedPwd) : '',
     }));
+  }
+
+  // Home config: encrypted with appPassword (per-user local).
+  // Fallback to masterPassword for users migrating from the old single-password model.
+  const homePwd = settings.appPassword || settings.masterPassword;
+  if (homePwd) {
     homeData.servers = homeData.servers.map(s => ({
-      ...s, password: s.password ? decrypt(s.password, pwd) : '',
+      ...s, password: s.password ? decrypt(s.password, homePwd) : '',
     }));
   }
 
@@ -516,16 +486,19 @@ ipcMain.handle('config:read', () => {
 
 ipcMain.handle('config:write', (_, data) => {
   const settings = readLocalSettings();
-  const pwd      = settings.masterPassword;
 
-  const encPwd = (s) => ({
+  // Home: cifrar con appPassword (por usuario); shared: cifrar con masterPassword (compartido)
+  const homePwd   = settings.appPassword || settings.masterPassword;
+  const sharedPwd = settings.masterPassword;
+
+  const encWith = (password) => (s) => ({
     ...s,
-    password: s.password && pwd ? encrypt(s.password, pwd) : (s.password || ''),
+    password: s.password && password ? encrypt(s.password, password) : (s.password || ''),
   });
 
   // Split: Home-group servers → local file, everything else → shared file
-  const homeServers   = (data.servers || []).filter(s => s.groupId === HOME_GROUP_ID).map(encPwd);
-  const sharedServers = (data.servers || []).filter(s => s.groupId !== HOME_GROUP_ID).map(encPwd);
+  const homeServers   = (data.servers || []).filter(s => s.groupId === HOME_GROUP_ID).map(encWith(homePwd));
+  const sharedServers = (data.servers || []).filter(s => s.groupId !== HOME_GROUP_ID).map(encWith(sharedPwd));
   const sharedGroups  = (data.groups  || []).filter(g => g.id      !== HOME_GROUP_ID);
 
   writeHomeConfig(resolveHomeConfigPath(settings), homeServers);
@@ -837,10 +810,17 @@ autoUpdater.on('update-downloaded',   info     => sendUpdate('update:downloaded'
 autoUpdater.on('error',               err      => sendUpdate('update:error',      err.message));
 
 ipcMain.handle('app:checkUpdate', async () => {
+  if (isDev) {
+    // En desarrollo no hay app-update.yml empaquetado; evitamos el error silencioso
+    sendUpdate('update:not-available', {});
+    return { hasUpdate: false, dev: true };
+  }
   try {
     const result = await autoUpdater.checkForUpdates();
     return { hasUpdate: !!result?.updateInfo, info: result?.updateInfo || null };
   } catch (err) {
+    // Propagar el error al renderer para que el botón muestre el estado de error
+    sendUpdate('update:error', err.message);
     return { hasUpdate: false, error: err.message };
   }
 });

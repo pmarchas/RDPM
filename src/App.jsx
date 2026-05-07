@@ -62,9 +62,14 @@ export default function App() {
       setUpdateInfo(info);
       setUpdateStatus('downloaded');
     });
-    api.app.onUpdateError(() => {
+    api.app.onUpdateError((msg) => {
       setUpdateStatus('error');
-      setTimeout(() => setUpdateStatus(null), 4000);
+      // Si el error menciona 404 o latest.yml es probable que falte el fichero en el release
+      const hint = (msg || '').includes('404') || (msg || '').toLowerCase().includes('not found')
+        ? ' (latest.yml no encontrado en el release)'
+        : '';
+      console.warn('Update error:', msg + hint);
+      setTimeout(() => setUpdateStatus(null), 5000);
     });
   }, []);
 
@@ -102,7 +107,8 @@ export default function App() {
   }, []);
 
   // ── Auto-lock: timer de inactividad ──────────────────────────────────────────
-  const hasAuth = !!(settings?.totpSecret || settings?.masterPassword);
+  // hasAuth: la app tiene protección si hay 2FA, contraseña de app, o contraseña maestra (migración)
+  const hasAuth = !!(settings?.totpSecret || settings?.appPassword || settings?.masterPassword);
 
   useEffect(() => {
     const minutes = settings?.lockTimeout ?? 0;
@@ -182,12 +188,24 @@ export default function App() {
   };
 
   const handleSettingsSaved = async (newSettings) => {
+    const oldAppPwd    = settings?.appPassword    || '';
+    const newAppPwd    = newSettings.appPassword  || '';
+    const oldMasterPwd = settings?.masterPassword || '';
+    const newMasterPwd = newSettings.masterPassword || '';
+
     await api.settings.write(newSettings);
     setSettings(newSettings);
     setViewMode(newSettings.viewMode || 'grid');
     setSettingsModal(false);
+
+    // Re-guardar config si alguna contraseña cambió → re-cifra con las nuevas claves
+    const pwdChanged = (oldAppPwd !== newAppPwd) || (oldMasterPwd !== newMasterPwd);
+    if (pwdChanged && (config.servers?.length || 0) > 0) {
+      try { await api.config.write(config); } catch {}
+    }
+
     try { const cfg = await api.config.read(); setConfig(cfg); } catch {}
-    showToast('success', 'Ajustes guardados');
+    showToast('success', t('saveSettings'));
   };
 
   const handleSaveServer = async (server) => {
@@ -369,7 +387,7 @@ export default function App() {
   if (locked && hasAuth) return (
     <LockScreen
       totpSecret={settings.totpSecret}
-      masterPassword={settings.masterPassword}
+      masterPassword={settings.appPassword || settings.masterPassword}
       onUnlock={() => {
         setLocked(false);
         // Reinicia el timer tras desbloquear

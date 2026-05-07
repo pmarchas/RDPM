@@ -13,7 +13,7 @@ export default function AboutModal({ onClose }) {
   }, []);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{t('aboutTitle')}</h2>
