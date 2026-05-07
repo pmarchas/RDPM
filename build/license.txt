@@ -1,0 +1,14 @@
+RDPM — Remote Desktop & Connection Manager
+Versión 1.0.0
+
+Copyright © 2025 pmarchas. Todos los derechos reservados.
+
+Este software se distribuye para uso personal e interno de la organización.
+Queda prohibida su redistribución sin autorización expresa del autor.
+
+Al instalar RDPM aceptas que:
+· Las credenciales se almacenan cifradas en tu equipo.
+· El autor no se responsabiliza del uso indebido de la aplicación.
+· Este software no incluye garantía de ningún tipo.
+
+Para soporte o consultas contacta con el administrador del sistema.
