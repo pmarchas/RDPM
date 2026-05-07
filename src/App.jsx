@@ -331,21 +331,28 @@ export default function App() {
   };
 
   const visibleServers = (() => {
+    const sortFn = (a, b) => {
+      if (sortBy === 'type') return (a.type || '').localeCompare(b.type || '');
+      if (sortBy === 'group') return (a.groupId || '').localeCompare(b.groupId || '');
+      return (a.name || '').localeCompare(b.name || '');
+    };
     let list = config.servers || [];
+    // When searching, ignore the group filter and search across ALL servers
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return [...list.filter(s =>
+        s.name?.toLowerCase().includes(q) ||
+        s.host?.toLowerCase().includes(q) ||
+        s.type?.toLowerCase().includes(q) ||
+        s.notes?.toLowerCase().includes(q)
+      )].sort(sortFn);
+    }
     if (selectedGroup === '__favorites__') {
       list = list.filter(s => s.favorite);
     } else if (selectedGroup !== 'all') {
       list = selectedGroup === 'ungrouped' ? list.filter(s => !s.groupId) : list.filter(s => s.groupId === selectedGroup);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(s => s.name?.toLowerCase().includes(q) || s.host?.toLowerCase().includes(q) || s.type?.toLowerCase().includes(q) || s.notes?.toLowerCase().includes(q));
-    }
-    return [...list].sort((a, b) => {
-      if (sortBy === 'type') return (a.type || '').localeCompare(b.type || '');
-      if (sortBy === 'group') return (a.groupId || '').localeCompare(b.groupId || '');
-      return (a.name || '').localeCompare(b.name || '');
-    });
+    return [...list].sort(sortFn);
   })();
 
   const lang = settings?.language || 'es';
@@ -403,7 +410,7 @@ export default function App() {
             {/* ── Botón de actualización ── */}
             <button
               className={updateStatus === 'available' || updateStatus === 'downloaded' ? 'btn-primary' : 'btn-icon'}
-              onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? () => { api.app.downloadUpdate(); setUpdateStatus('downloading'); } : handleCheckUpdate}
+              onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? async () => { const r = await api.app.downloadUpdate(); if (!r?.macFallback) setUpdateStatus('downloading'); } : handleCheckUpdate}
               disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
               title={updateStatus === 'downloaded' ? t('restartInstall') : updateStatus === 'available' ? `v${updateInfo?.version} ${t('updateAvailable')}` : updateStatus === 'downloading' ? `${t('downloading')} ${updateProgress}%` : updateStatus === 'uptodate' ? t('upToDate') : t('checkUpdates')}
               style={{ position: 'relative', ...(updateStatus === 'available' || updateStatus === 'downloaded' ? { display: 'flex', alignItems: 'center', gap: 6, animation: 'pulse-btn 2s ease-in-out infinite' } : {}) }}

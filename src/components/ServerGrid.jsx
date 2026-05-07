@@ -152,7 +152,16 @@ function ServerCard({ server, group, ping, onConnect, onEdit, onDelete, onToggle
         </div>
         <div className="server-card-body">
           <div className="server-card-name" title={server.name}>{server.name}</div>
-          <div className="server-card-host" title={server.host}>{server.host}{server.port ? `:${server.port}` : ''}</div>
+          <div className="server-card-host" title={server.host}>
+            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, opacity: 0.5 }}><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            {server.host}{server.port ? `:${server.port}` : ''}
+          </div>
+          {server.mac && (
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, opacity: 0.5 }}><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{server.mac}</span>
+            </div>
+          )}
           <NoteEditor server={server} onSave={onUpdateNotes} />
         </div>
       </div>
@@ -246,9 +255,17 @@ function ServerRow({ server, group, ping, onConnect, onEdit, onDelete, onToggleF
         <NoteEditor server={server} onSave={onUpdateNotes} />
       </div>
 
-      {/* 5 — host */}
-      <div style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {server.host}{server.port ? `:${server.port}` : ''}
+      {/* 5 — host + mac */}
+      <div style={{ overflow: 'hidden' }}>
+        <div style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {server.host}{server.port ? `:${server.port}` : ''}
+        </div>
+        {server.mac && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <svg width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, opacity: 0.5 }}><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+            {server.mac}
+          </div>
+        )}
       </div>
 
       {/* 6 — tipo badge */}
@@ -378,7 +395,7 @@ export default function ServerGrid({ servers, groups, viewMode, pingResults = {}
         .server-card-icon { width: 44px; height: 44px; border-radius: var(--radius-sm); border: 1px solid; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .server-card-body { flex: 1; min-width: 0; }
         .server-card-name { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .server-card-host { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .server-card-host { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
         .server-card-notes { font-size: 12px; color: var(--text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .server-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .server-card-actions { display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity .15s; }

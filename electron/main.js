@@ -318,27 +318,87 @@ function launchSSH(server) {
 
   // ── Windows ────────────────────────────────────────────────────────────────
   if (process.platform === 'win32') {
-    const plinkPaths = [
+    // ── Buscar plink (PuTTY) — el más fiable para inyectar contraseña ─────
+    const plinkCandidates = [
       'C:\\Program Files\\PuTTY\\plink.exe',
       'C:\\Program Files (x86)\\PuTTY\\plink.exe',
       path.join(os.homedir(), 'AppData\\Local\\Programs\\PuTTY\\plink.exe'),
+      'C:\\ProgramData\\chocolatey\\bin\\plink.exe',
+      'C:\\tools\\putty\\plink.exe',
     ];
-    const plink = plinkPaths.find(p => fs.existsSync(p));
-    let sshCmd;
-    if (plink && password) {
+    let plinkPath = plinkCandidates.find(p => { try { return fs.existsSync(p); } catch { return false; } });
+    if (!plinkPath) {
+      try {
+        const r = require('child_process').execSync('where plink 2>nul', { encoding: 'utf8', stdio: ['pipe','pipe','pipe'] });
+        const candidate = r.trim().split(/\r?\n/)[0];
+        if (candidate && fs.existsSync(candidate)) plinkPath = candidate;
+      } catch {}
+    }
+
+    if (plinkPath && password) {
+      // plink soporta -pw directamente
       const portArg = (server.port || 22) !== 22 ? `-P ${server.port} ` : '';
       const tgt = server.username ? `${server.username}@${server.host}` : server.host;
-      sshCmd = `"${plink}" -pw "${password.replace(/"/g, '""')}" -ssh ${portArg}${tgt}`;
-    } else if (password) {
-      clipboard.writeText(password);
+      const sshCmd = `"${plinkPath}" -batch -pw "${password.replace(/"/g, '""')}" -ssh ${portArg}${tgt}`;
+      exec(`wt.exe new-tab --title "${server.name}" -- ${sshCmd}`, (err) => {
+        if (err) exec(`start powershell.exe -NoExit -Command "${sshCmd}"`, (e2) => {
+          if (e2) exec(`start cmd.exe /k ${sshCmd}`);
+        });
+      });
+      return null;
     }
-    sshCmd = sshCmd || sshBase;
-    exec(`wt.exe new-tab --title "${server.name}" -- ${sshCmd}`, (err) => {
-      if (err) exec(`start powershell.exe -NoExit -Command "${sshCmd}"`, (e2) => {
-        if (e2) exec(`start cmd.exe /k ${sshCmd}`);
+
+    if (password) {
+      // Sin plink: usar SSH_ASKPASS con ficheros temporales (OpenSSH ≥ 8.4 en Win10/11)
+      // La contraseña se escribe en un .tmp para evitar problemas de escaping en cmd.
+      const ts = Date.now();
+      const passFile   = path.join(os.tmpdir(), `rdpm_pw_${ts}.tmp`);
+      const askpassBat = path.join(os.tmpdir(), `rdpm_ap_${ts}.bat`);
+      const wrapperBat = path.join(os.tmpdir(), `rdpm_ssh_${ts}.bat`);
+
+      fs.writeFileSync(passFile, password, 'utf8');  // sin escaping, fichero binario
+
+      fs.writeFileSync(askpassBat, [
+        '@echo off',
+        `type "${passFile}"`,
+        `del "${passFile}" 2>nul`,
+        'del "%~f0" 2>nul',
+      ].join('\r\n'), 'utf8');
+
+      fs.writeFileSync(wrapperBat, [
+        '@echo off',
+        `set "SSH_ASKPASS_REQUIRE=force"`,
+        `set "SSH_ASKPASS=${askpassBat}"`,
+        sshBase,
+        `del "${askpassBat}" 2>nul`,
+        `del "${passFile}" 2>nul`,
+        'del "%~f0" 2>nul',
+      ].join('\r\n'), 'utf8');
+
+      // Limpieza de emergencia por si el bat no se auto-elimina
+      setTimeout(() => { try { fs.unlinkSync(passFile);   } catch {} }, 120000);
+      setTimeout(() => { try { fs.unlinkSync(askpassBat); } catch {} }, 120000);
+      setTimeout(() => { try { fs.unlinkSync(wrapperBat); } catch {} }, 120000);
+
+      // También copiamos al portapapeles: si SSH_ASKPASS_REQUIRE no está soportado
+      // (OpenSSH < 8.4), el usuario puede pegar la contraseña manualmente.
+      clipboard.writeText(password);
+
+      exec(`wt.exe new-tab --title "${server.name}" -- cmd.exe /k "${wrapperBat}"`, (err) => {
+        if (err) exec(`start cmd.exe /k "${wrapperBat}"`, (e2) => {
+          if (e2) exec(`start powershell.exe -NoExit -Command "cmd /k \\\"${wrapperBat}\\\""`);
+        });
+      });
+      return 'pwd_copied'; // toast de fallback por si SSH_ASKPASS no funciona
+    }
+
+    // Sin contraseña
+    exec(`wt.exe new-tab --title "${server.name}" -- ${sshBase}`, (err) => {
+      if (err) exec(`start powershell.exe -NoExit -Command "${sshBase}"`, (e2) => {
+        if (e2) exec(`start cmd.exe /k ${sshBase}`);
       });
     });
-    return (!plink && password) ? 'pwd_copied' : null;
+    return null;
   }
 
   // ── macOS / Linux ──────────────────────────────────────────────────────────
@@ -786,11 +846,22 @@ ipcMain.handle('app:checkUpdate', async () => {
 });
 
 ipcMain.handle('app:downloadUpdate', () => {
+  // macOS: unsigned apps cannot be replaced by electron-updater (Gatekeeper).
+  // Open the releases page in the browser so the user can download manually.
+  if (process.platform === 'darwin') {
+    shell.openExternal('https://github.com/pmarchas/RDPM/releases/latest');
+    return { macFallback: true };
+  }
   autoUpdater.downloadUpdate();
-  return true;
+  return { macFallback: false };
 });
 
 ipcMain.handle('app:installUpdate', () => {
+  // Same macOS restriction: quitAndInstall won't work for unsigned apps.
+  if (process.platform === 'darwin') {
+    shell.openExternal('https://github.com/pmarchas/RDPM/releases/latest');
+    return;
+  }
   autoUpdater.quitAndInstall(false, true);
 });
 
