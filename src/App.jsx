@@ -36,6 +36,7 @@ export default function App() {
   const [ctxMenu, setCtxMenu] = useState({ open: false, x: 0, y: 0, server: null });
   const [toasts, setToasts] = useState([]);
   const searchRef = useRef(null);
+  const [platform, setPlatform] = useState('');
 
   // ── Update state ─────────────────────────────────────────────────────────────
   // status: null | 'available' | 'downloading' | 'downloaded' | 'error' | 'checking' | 'uptodate'
@@ -144,7 +145,8 @@ export default function App() {
   async function init() {
     setLoading(true);
     try {
-      const s = await api.settings.read();
+      const [s, plat] = await Promise.all([api.settings.read(), api.app.platform()]);
+      setPlatform(plat || '');
       setSettings(s);
       setViewMode(s.viewMode || 'grid');
       if (s.totpSecret) setLocked(true);
@@ -428,7 +430,7 @@ export default function App() {
             {/* ── Botón de actualización ── */}
             <button
               className={updateStatus === 'available' || updateStatus === 'downloaded' ? 'btn-primary' : 'btn-icon'}
-              onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? async () => { const r = await api.app.downloadUpdate(); if (!r?.macFallback) setUpdateStatus('downloading'); } : handleCheckUpdate}
+              onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? async () => { const r = await api.app.downloadUpdate(); if (r?.macFallback) { showToast('info', t('openingBrowser')); } else { setUpdateStatus('downloading'); } } : handleCheckUpdate}
               disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
               title={updateStatus === 'downloaded' ? t('restartInstall') : updateStatus === 'available' ? `v${updateInfo?.version} ${t('updateAvailable')}` : updateStatus === 'downloading' ? `${t('downloading')} ${updateProgress}%` : updateStatus === 'uptodate' ? t('upToDate') : t('checkUpdates')}
               style={{ position: 'relative', ...(updateStatus === 'available' || updateStatus === 'downloaded' ? { display: 'flex', alignItems: 'center', gap: 6, animation: 'pulse-btn 2s ease-in-out infinite' } : {}) }}
@@ -449,7 +451,7 @@ export default function App() {
               {updateStatus === 'available' && (
                 <>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  v{updateInfo?.version} {t('updateAvailable')}
+                  v{updateInfo?.version} {platform === 'darwin' ? t('downloadInBrowser') : t('updateAvailable')}
                 </>
               )}
               {updateStatus === 'uptodate' && <svg width="15" height="15" fill="none" stroke="var(--success)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
