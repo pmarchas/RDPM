@@ -6,9 +6,10 @@ contextBridge.exposeInMainWorld('rm', {
     write: (s)   => ipcRenderer.invoke('settings:write', s),
   },
   config: {
-    read:  ()          => ipcRenderer.invoke('config:read'),
-    write: (data)      => ipcRenderer.invoke('config:write', data),
-    test:  (path)      => ipcRenderer.invoke('config:test', path),
+    read:   ()            => ipcRenderer.invoke('config:read'),
+    write:  (data)        => ipcRenderer.invoke('config:write', data),
+    test:   (path)        => ipcRenderer.invoke('config:test', path),
+    export: (opts)        => ipcRenderer.invoke('config:export', opts),
   },
   connection: {
     launch: (server)   => ipcRenderer.invoke('connection:launch', server),

@@ -390,6 +390,35 @@ export default function SettingsModal({ settings, onSave, onClose }) {
           </div>
 
           {settingsPath && <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginTop: 4 }}>{t('machineSettings')} <code style={{ fontFamily: 'var(--font-mono)' }}>{settingsPath}</code></div>}
+
+          {/* ── Exportar configuración ─────────────────────────────────────── */}
+          <div className="settings-section">
+            <div className="settings-section-title">
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              {t('exportTitle')}
+            </div>
+            <p className="settings-desc">{t('exportDesc')}</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+                onClick={async () => {
+                  const r = await api.config.export({ includeHome: false });
+                  if (r?.ok) alert(t('exportOk').replace('{path}', r.path));
+                }}>
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                {t('exportShared')}
+              </button>
+              <button className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+                onClick={async () => {
+                  const r = await api.config.export({ includeHome: true });
+                  if (r?.ok) alert(t('exportOk').replace('{path}', r.path));
+                }}>
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                {t('exportAll')}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="modal-footer">

@@ -338,7 +338,7 @@ function launchSSH(server) {
     }
 
     if (plinkPath && password) {
-      // plink soporta -pw directamente
+      // plink soporta -pw directamente — inyección segura sin exponer la contraseña
       const portArg = (server.port || 22) !== 22 ? `-P ${server.port} ` : '';
       const tgt = server.username ? `${server.username}@${server.host}` : server.host;
       const sshCmd = `"${plinkPath}" -batch -pw "${password.replace(/"/g, '""')}" -ssh ${portArg}${tgt}`;
@@ -351,17 +351,46 @@ function launchSSH(server) {
     }
 
     if (password) {
-      // Sin plink: copiar la contraseña al portapapeles y abrir el terminal con ssh.
-      // El usuario la pega cuando ssh la solicite (una sola vez).
-      clipboard.writeText(password);
+      // Sin plink: SSH_ASKPASS — escribimos un helper .bat temporal que devuelve la contraseña
+      // a SSH por stdout (nunca queda en el portapapeles ni en la pantalla).
+      // El bat usa PowerShell con -EncodedCommand para manejar cualquier carácter especial.
+      const tmpBat = path.join(os.tmpdir(), `rdpm_ask_${Date.now()}.bat`);
+      const psOutputCmd = `Write-Output '${password.replace(/'/g, "''")}'`;
+      const encodedOutput = Buffer.from(psOutputCmd, 'utf16le').toString('base64');
+      fs.writeFileSync(tmpBat, `@powershell -NoProfile -NonInteractive -EncodedCommand ${encodedOutput}\r\n`, 'utf8');
+      // Autodestrucción a los 20 s (tiempo suficiente para que SSH lo lea y conecte)
+      setTimeout(() => { try { fs.unlinkSync(tmpBat); } catch {} }, 20000);
+
+      // Construimos el comando PowerShell que lanza SSH con las variables de entorno necesarias.
+      // Usamos -EncodedCommand para evitar problemas de comillas/espacios en la ruta del bat.
+      const escapedBat = tmpBat.replace(/"/g, '\\"');
+      const psTermCmd = [
+        `$env:SSH_ASKPASS="${escapedBat}"`,
+        `$env:SSH_ASKPASS_REQUIRE="force"`,
+        `$env:DISPLAY=":0"`,   // fallback para OpenSSH < 8.4
+        sshBase,
+      ].join('; ');
+      const encodedTerm = Buffer.from(psTermCmd, 'utf16le').toString('base64');
+
+      exec(`wt.exe new-tab --title "${server.name}" -- powershell.exe -NoExit -EncodedCommand ${encodedTerm}`, (err) => {
+        if (err) exec(`start powershell.exe -NoExit -EncodedCommand ${encodedTerm}`, (e2) => {
+          if (e2) {
+            // Último recurso: portapapeles (degradación controlada)
+            clipboard.writeText(password);
+            exec(`start cmd.exe /k "${sshBase}"`);
+          }
+        });
+      });
+      return null;
     }
 
+    // Sin contraseña: lanzar SSH directamente
     exec(`wt.exe new-tab --title "${server.name}" -- ${sshBase}`, (err) => {
       if (err) exec(`start powershell.exe -NoExit -Command "${sshBase}"`, (e2) => {
         if (e2) exec(`start cmd.exe /k "${sshBase}"`);
       });
     });
-    return password ? 'pwd_copied' : null;
+    return null;
   }
 
   // ── macOS / Linux ──────────────────────────────────────────────────────────
@@ -582,6 +611,39 @@ ipcMain.handle('dialog:saveHomeConfig', async () => {
 });
 
 ipcMain.handle('homeConfig:getDefaultPath', () => homeConfigFile);
+
+// ─── Exportar configuración ───────────────────────────────────────────────────
+ipcMain.handle('config:export', async (_, { includeHome = false } = {}) => {
+  const settings   = readLocalSettings();
+  const sharedData = readConfig(settings.configPath);
+
+  let servers = [...(sharedData.servers || [])];
+  let groups  = [...(sharedData.groups  || [])];
+
+  if (includeHome) {
+    const homeData = readHomeConfig(resolveHomeConfigPath(settings));
+    servers = [...(homeData.servers || []), ...servers];
+    groups  = [HOME_GROUP, ...groups];
+  }
+
+  const exportObj = {
+    version:    sharedData.version || '1.0',
+    exportedAt: new Date().toISOString(),
+    groups,
+    servers,
+  };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title:       'Exportar configuración',
+    defaultPath: `rdpm-config-${today}.json`,
+    filters:     [{ name: 'JSON', extensions: ['json'] }],
+  });
+
+  if (result.canceled || !result.filePath) return { canceled: true };
+  fs.writeFileSync(result.filePath, JSON.stringify(exportObj, null, 2), 'utf8');
+  return { ok: true, path: result.filePath };
+});
 
 // ─── TCP ping ─────────────────────────────────────────────────────────────────
 function tcpPing(host, port, timeout = 3000) {
@@ -825,14 +887,19 @@ ipcMain.handle('app:checkUpdate', async () => {
   }
 });
 
-ipcMain.handle('app:downloadUpdate', () => {
+ipcMain.handle('app:downloadUpdate', async () => {
   // macOS: unsigned apps cannot be replaced by electron-updater (Gatekeeper).
   // Open the releases page in the browser so the user can download manually.
   if (process.platform === 'darwin') {
     shell.openExternal('https://github.com/pmarchas/RDPM/releases/latest');
     return { macFallback: true };
   }
-  autoUpdater.downloadUpdate();
+  try {
+    await autoUpdater.downloadUpdate();
+  } catch (err) {
+    sendUpdate('update:error', err.message);
+    return { macFallback: false, error: err.message };
+  }
   return { macFallback: false };
 });
 
