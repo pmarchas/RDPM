@@ -6,7 +6,7 @@ const api = window.rm;
 
 export default function SettingsModal({ settings, onSave, onClose }) {
   const t = useT();
-  const [form, setForm] = useState({ configPath: '', homeConfigPath: '', appPassword: '', masterPassword: '', viewMode: 'grid', totpSecret: '', lockTimeout: 0, lockOnSystemSleep: true, passwordWarningDays: 90, language: 'es', ...settings });
+  const [form, setForm] = useState({ configPath: '', homeConfigPath: '', appPassword: '', masterPassword: '', viewMode: 'grid', totpSecret: '', lockTimeout: 0, lockOnSystemSleep: true, passwordWarningDays: 90, language: 'es', autoPing: false, pingInterval: 120, ...settings });
   const [showAppPwd, setShowAppPwd] = useState(false);
   const [testResult, setTestResult]         = useState(null);
   const [testing, setTesting]               = useState(false);
@@ -390,6 +390,36 @@ export default function SettingsModal({ settings, onSave, onClose }) {
           </div>
 
           {settingsPath && <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginTop: 4 }}>{t('machineSettings')} <code style={{ fontFamily: 'var(--font-mono)' }}>{settingsPath}</code></div>}
+
+          {/* ── Comprobación de conectividad ───────────────────────────────── */}
+          <div className="settings-section">
+            <div className="settings-section-title">
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 6l5 6-5 6M8 18h13"/></svg>
+              {t('pingTitle')}
+            </div>
+            <p className="settings-desc">{t('pingDesc')}</p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 12 }}>
+              <div style={{ position: 'relative', width: 36, height: 20, flexShrink: 0 }}>
+                <input type="checkbox" checked={!!form.autoPing} onChange={e => set('autoPing', e.target.checked)} style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} />
+                <div onClick={() => set('autoPing', !form.autoPing)} style={{ position: 'absolute', inset: 0, borderRadius: 20, background: form.autoPing ? 'var(--accent)' : 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', transition: 'background .2s' }}>
+                  <div style={{ position: 'absolute', top: 2, left: form.autoPing ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)' }} />
+                </div>
+              </div>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('pingEnable')}</span>
+            </label>
+            {form.autoPing && (
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>{t('pingIntervalLabel')}</label>
+                <select value={form.pingInterval ?? 120} onChange={e => set('pingInterval', Number(e.target.value))}>
+                  <option value={30}>30 {t('seconds')}</option>
+                  <option value={60}>1 {t('minute')}</option>
+                  <option value={120}>2 {t('minutes')}</option>
+                  <option value={300}>5 {t('minutes')}</option>
+                  <option value={600}>10 {t('minutes')}</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           {/* ── Exportar configuración ─────────────────────────────────────── */}
           <div className="settings-section">

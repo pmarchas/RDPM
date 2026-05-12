@@ -91,14 +91,18 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // Auto-ping whenever servers list changes, then every 60 s
+  // Auto-ping: solo si está activado en ajustes, y solo servidores sin noPing
   useEffect(() => {
-    const servers = config.servers;
-    if (!servers?.length) return;
+    const allServers = config.servers;
+    if (!allServers?.length) return;
+    if (!settings?.autoPing) return;          // desactivado por defecto
+    const servers = allServers.filter(s => !s.noPing);
+    if (!servers.length) return;
+    const intervalMs = Math.max(30, settings?.pingInterval ?? 120) * 1000;
     pingAll(servers);
-    const t = setInterval(() => pingAll(servers), 60_000);
+    const t = setInterval(() => pingAll(servers), intervalMs);
     return () => clearInterval(t);
-  }, [config.servers]);
+  }, [config.servers, settings?.autoPing, settings?.pingInterval]);
 
   useEffect(() => {
     const close = () => setCtxMenu(c => ({ ...c, open: false }));

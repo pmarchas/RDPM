@@ -6,7 +6,7 @@ const DEFAULT_PORTS = { RDP: 3389, VNC: 5900, SSH: 22 };
 const INITIAL = {
   name: '', host: '', port: '', type: 'RDP',
   username: '', password: '', groupId: '', notes: '',
-  mac: '', keyPath: '',
+  mac: '', keyPath: '', noPing: false,
   jumpHost: { enabled: false, host: '', port: 22, username: '', keyPath: '' },
 };
 
@@ -159,6 +159,12 @@ export default function ServerModal({ server, groups, onSave, onClose }) {
                   <input value={form.mac || ''} onChange={e => set('mac', e.target.value)}
                     placeholder="AA:BB:CC:DD:EE:FF" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} />
                 </div>
+
+                {/* No ping */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', userSelect: 'none' }}>
+                  <input type="checkbox" checked={!!form.noPing} onChange={e => set('noPing', e.target.checked)} />
+                  {t('noPing')}
+                </label>
 
                 {/* SSH key */}
                 {form.type === 'SSH' && (

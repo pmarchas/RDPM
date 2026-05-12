@@ -35,6 +35,8 @@ const SETTINGS_DEFAULTS = {
   lockOnSystemSleep: true,  // lock when OS screen locks / suspends
   passwordWarningDays: 90,  // warn when password is older than N days (0 = disabled)
   language: 'es',           // 'es' | 'en'
+  autoPing: false,          // comprobación periódica de conectividad (desactivado por defecto — evita alertas en IDS/fail2ban)
+  pingInterval: 120,        // segundos entre pings (mín. 30)
 };
 
 function readLocalSettings() {
@@ -351,18 +353,22 @@ function launchSSH(server) {
     }
 
     if (password) {
-      // Sin plink: SSH_ASKPASS — escribimos un helper .bat temporal que devuelve la contraseña
-      // a SSH por stdout (nunca queda en el portapapeles ni en la pantalla).
-      // El bat usa PowerShell con -EncodedCommand para manejar cualquier carácter especial.
-      const tmpBat = path.join(os.tmpdir(), `rdpm_ask_${Date.now()}.bat`);
-      const psOutputCmd = `Write-Output '${password.replace(/'/g, "''")}'`;
-      const encodedOutput = Buffer.from(psOutputCmd, 'utf16le').toString('base64');
-      fs.writeFileSync(tmpBat, `@powershell -NoProfile -NonInteractive -EncodedCommand ${encodedOutput}\r\n`, 'utf8');
-      // Autodestrucción a los 20 s (tiempo suficiente para que SSH lo lea y conecte)
-      setTimeout(() => { try { fs.unlinkSync(tmpBat); } catch {} }, 20000);
+      // Sin plink: SSH_ASKPASS con helper .bat + fichero de contraseña temporal.
+      // El bat usa "@type file" para escribir la contraseña en stdout sin exponerla
+      // en la pantalla ni en el portapapeles. Ambos ficheros se autodestruyen a los 20 s.
+      const ts      = Date.now();
+      const tmpPwd  = path.join(os.tmpdir(), `rdpm_p_${ts}.tmp`);
+      const tmpBat  = path.join(os.tmpdir(), `rdpm_a_${ts}.bat`);
+      fs.writeFileSync(tmpPwd, password, { encoding: 'utf8' });
+      fs.writeFileSync(tmpBat, `@type "${tmpPwd}"\r\n`, 'utf8');
+      const cleanup = () => {
+        try { fs.unlinkSync(tmpBat); } catch {}
+        try { fs.unlinkSync(tmpPwd); } catch {}
+      };
+      setTimeout(cleanup, 20000);
 
-      // Construimos el comando PowerShell que lanza SSH con las variables de entorno necesarias.
-      // Usamos -EncodedCommand para evitar problemas de comillas/espacios en la ruta del bat.
+      // El comando PowerShell que lanza SSH con las variables de entorno.
+      // -EncodedCommand evita problemas de comillas/espacios en rutas con el nombre de usuario.
       const escapedBat = tmpBat.replace(/"/g, '\\"');
       const psTermCmd = [
         `$env:SSH_ASKPASS="${escapedBat}"`,
@@ -375,7 +381,7 @@ function launchSSH(server) {
       exec(`wt.exe new-tab --title "${server.name}" -- powershell.exe -NoExit -EncodedCommand ${encodedTerm}`, (err) => {
         if (err) exec(`start powershell.exe -NoExit -EncodedCommand ${encodedTerm}`, (e2) => {
           if (e2) {
-            // Último recurso: portapapeles (degradación controlada)
+            cleanup();
             clipboard.writeText(password);
             exec(`start cmd.exe /k "${sshBase}"`);
           }
