@@ -43,6 +43,7 @@ export default function App() {
   const [updateStatus,   setUpdateStatus]   = useState(null);
   const [updateInfo,     setUpdateInfo]     = useState(null);   // { version, releaseNotes }
   const [updateProgress, setUpdateProgress] = useState(0);      // 0-100
+  const [installConfirm, setInstallConfirm] = useState(false);  // diálogo de confirmación
 
   useEffect(() => {
     init();
@@ -62,14 +63,22 @@ export default function App() {
     api.app.onUpdateDownloaded(info => {
       setUpdateInfo(info);
       setUpdateStatus('downloaded');
+      // En Windows mostramos el diálogo de confirmación automáticamente
+      if (window.rm) {
+        api.app.platform().then(p => { if (p === 'win32') setInstallConfirm(true); });
+      }
     });
     api.app.onUpdateError((msg) => {
       setUpdateStatus('error');
-      // Si el error menciona 404 o latest.yml es probable que falte el fichero en el release
       const hint = (msg || '').includes('404') || (msg || '').toLowerCase().includes('not found')
         ? ' (latest.yml no encontrado en el release)'
         : '';
       console.warn('Update error:', msg + hint);
+      // Fallback: abrir el navegador si la descarga falla en Windows
+      if (platform === 'win32') {
+        showToast('info', t('updateDownloadFailed'));
+        api.app.openExternal('https://github.com/pmarchas/RDPM/releases/latest');
+      }
       setTimeout(() => setUpdateStatus(null), 5000);
     });
   }, []);
@@ -434,7 +443,7 @@ export default function App() {
             {/* ── Botón de actualización ── */}
             <button
               className={updateStatus === 'available' || updateStatus === 'downloaded' ? 'btn-primary' : 'btn-icon'}
-              onClick={updateStatus === 'downloaded' ? () => api.app.installUpdate() : updateStatus === 'available' ? async () => { const r = await api.app.downloadUpdate(); if (r?.macFallback) { showToast('info', t('openingBrowser')); } else { setUpdateStatus('downloading'); } } : handleCheckUpdate}
+              onClick={updateStatus === 'downloaded' ? () => setInstallConfirm(true) : updateStatus === 'available' ? async () => { const r = await api.app.downloadUpdate(); if (r?.macFallback) { showToast('info', t('openingBrowser')); } else if (r?.error) { showToast('info', t('updateDownloadFailed')); api.app.openExternal('https://github.com/pmarchas/RDPM/releases/latest'); } else { setUpdateStatus('downloading'); } } : handleCheckUpdate}
               disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
               title={updateStatus === 'downloaded' ? t('restartInstall') : updateStatus === 'available' ? `v${updateInfo?.version} ${t('updateAvailable')}` : updateStatus === 'downloading' ? `${t('downloading')} ${updateProgress}%` : updateStatus === 'uptodate' ? t('upToDate') : t('checkUpdates')}
               style={{ position: 'relative', ...(updateStatus === 'available' || updateStatus === 'downloaded' ? { display: 'flex', alignItems: 'center', gap: 6, animation: 'pulse-btn 2s ease-in-out infinite' } : {}) }}
@@ -485,6 +494,35 @@ export default function App() {
       />}
       {historyModal && <HistoryModal onClose={() => setHistoryModal(false)} />}
       {importModal  && <ImportModal groups={config.groups || []} onImport={handleImportServers} onClose={() => setImportModal(false)} />}
+
+      {/* ── Diálogo de confirmación de instalación de actualización ── */}
+      {installConfirm && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setInstallConfirm(false); }}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="18" height="18" fill="none" stroke="var(--accent)" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {t('updateReadyTitle')}
+              </h2>
+            </div>
+            <div className="modal-body" style={{ padding: '20px 24px' }}>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>
+                {t('updateReadyDesc').replace('{version}', updateInfo?.version || '')}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                {t('updateReadyNote')}
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-ghost" onClick={() => setInstallConfirm(false)}>{t('updateLater')}</button>
+              <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => { setInstallConfirm(false); api.app.installUpdate(); }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                {t('updateInstallNow')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="toast-container">
         {toasts.map(t => (
