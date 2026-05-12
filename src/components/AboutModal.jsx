@@ -14,13 +14,27 @@ export default function AboutModal({ onClose }) {
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{t('aboutTitle')}</h2>
-          <button className="btn-icon" onClick={onClose}>
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
+      <div className="modal" style={{ width: 420, position: 'relative' }} onClick={e => e.stopPropagation()}>
+
+        {/* Botón de cierre estilo macOS — círculo rojo traffic-light */}
+        <button
+          onClick={onClose}
+          title={t('close')}
+          style={{
+            position: 'absolute', top: 14, left: 14, zIndex: 10,
+            width: 14, height: 14, borderRadius: '50%',
+            background: '#ff5f57', border: '1px solid #e0443e',
+            cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 1px 2px rgba(0,0,0,.25)',
+            transition: 'filter .15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.88)'; e.currentTarget.querySelector('svg').style.opacity = '1'; }}
+          onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.querySelector('svg').style.opacity = '0'; }}
+        >
+          <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="#820005" strokeWidth="1.8" style={{ opacity: 0, transition: 'opacity .1s' }}>
+            <path d="M2 2l6 6M8 2l-6 6"/>
+          </svg>
+        </button>
 
         <div className="modal-body" style={{ textAlign: 'center', padding: '32px 36px' }}>
 
@@ -72,8 +86,8 @@ export default function AboutModal({ onClose }) {
           </a>
         </div>
 
-        <div className="modal-footer" style={{ justifyContent: 'center' }}>
-          <button className="btn-primary" onClick={onClose} style={{ padding: '9px 32px' }}>{t('close')}</button>
+        <div className="modal-footer" style={{ justifyContent: 'center', borderTop: '1px solid var(--border)' }}>
+          <button className="btn-ghost" onClick={onClose} style={{ padding: '9px 32px' }}>{t('close')}</button>
         </div>
       </div>
     </div>
